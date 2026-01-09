@@ -17,3 +17,7 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+.audit_tmp/
+audit_repos.py
+.standardize_tmp/
+standardize_repos.py

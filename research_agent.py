@@ -1,6 +1,7 @@
 import asyncio
 import os
 from typing import List, Optional
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -79,6 +80,13 @@ synthesis_agent = Agent(
     system_prompt="You are a senior analyst. Synthesize all the provided research notes into a cohesive, professional report. Cite sources where possible in the evidence."
 )
 
+# 5. Validator Agent
+validator_agent = Agent(
+    'openai:gpt-4o',
+    output_type=FinalReport,
+    system_prompt="You are a Fact-Checking Auditor. Review the provided report for logical inconsistencies, potential hallucinations, or outdated info relative to the current date. deeply check the report for any misinformation or fake news. If you find any, correct it. Ensure the final output is in the requested language."
+)
+
 # --- Tools ---
 
 async def tavily_search(tavily_client: TavilyClient, query: str) -> List[SearchResult]:
@@ -101,16 +109,19 @@ async def tavily_search(tavily_client: TavilyClient, query: str) -> List[SearchR
 
 # --- Workflow Logic ---
 
-async def run_deep_research(user_query: str) -> FinalReport:
+async def run_deep_research(user_query: str, language: str = "English") -> FinalReport:
     tavily_key = os.getenv("TAVILY_API_KEY")
     if not tavily_key:
         raise ValueError("TAVILY_API_KEY not found in environment")
     
     deps = ResearchDeps(tavily_api_key=tavily_key)
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    print(f"Starting research. Date: {current_date}, Language: {language}")
 
     # Step 1: Resolve Topic
     print(f"Resolving topic for: {user_query}")
-    res_result = await resolution_agent.run(user_query)
+    print(f"Resolving topic for: {user_query}")
+    res_result = await resolution_agent.run(f"Current Date: {current_date}\nQuery: {user_query}")
     topic_res = res_result.output
     
     search_subject = topic_res.company_name if topic_res.is_ticker and topic_res.company_name else user_query
@@ -124,7 +135,7 @@ async def run_deep_research(user_query: str) -> FinalReport:
     # Step 3: Plan Research Angles
     print("Planning research angles...")
     plan_result = await planning_agent.run(
-        f"Subject: {search_subject}\nContext: {topic_res.context}\nInitial Findings: {discovery_context}"
+        f"Current Date: {current_date}\nSubject: {search_subject}\nContext: {topic_res.context}\nInitial Findings: {discovery_context}"
     )
     angle_plan = plan_result.output
     print(f"Angles generated: {[a.title for a in angle_plan.angles]}")
@@ -153,9 +164,17 @@ async def run_deep_research(user_query: str) -> FinalReport:
     print("Synthesizing final report...")
     
     # Construct a big prompt context with all the data
-    synthesis_input = f"Report Subject: {search_subject}\n\n"
+    # Construct a big prompt context with all the data
+    synthesis_input = f"Report Subject: {search_subject}\nTarget Language: {language}\nCurrent Date: {current_date}\n\n"
     for title, content in angle_data_map.items():
         synthesis_input += f"## Research Angle: {title}\n{content}\n\n{'-'*20}\n"
 
     final_result = await synthesis_agent.run(synthesis_input)
-    return final_result.output
+    final_result = await synthesis_agent.run(synthesis_input)
+    
+    # Step 6: Validation
+    print("Validating report...")
+    validation_input = f"Original Query: {user_query}\nTarget Language: {language}\nCurrent Date: {current_date}\n\nDraft Report:\n{final_result.output}"
+    validated_result = await validator_agent.run(validation_input)
+    
+    return validated_result.output

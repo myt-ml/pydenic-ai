@@ -41,7 +41,7 @@ def format_report_markdown(report: FinalReport) -> str:
     md += f"# Future Outlook\n\n{report.future_outlook}"
     return md
 
-async def process_query(message, history):
+async def process_query(message, language, history):
     """
     Gradio callback.
     """
@@ -57,7 +57,7 @@ async def process_query(message, history):
     
     try:
         # Run research
-        report = await run_deep_research(message)
+        report = await run_deep_research(message, language=language)
         response_text = format_report_markdown(report)
         
         # Append Assistant Message
@@ -95,9 +95,12 @@ with gr.Blocks(title="Deep Research Agent") as demo:
     # We do NOT pass type="messages" as it causes a TypeError in this version
     chatbot = gr.Chatbot(label="Research Report", height=700)
     msg = gr.Textbox(label="Query", placeholder="Type a ticker or topic here...")
+    language = gr.Radio(choices=["English", "Arabic"], value="English", label="Report Language")
     
     # Pass history to function, return updated history and clear message
-    msg.submit(process_query, [msg, chatbot], [chatbot, msg])
+    msg.submit(process_query, [msg, language, chatbot], [chatbot, msg])
+    submit_btn = gr.Button("Research")
+    submit_btn.click(process_query, [msg, language, chatbot], [chatbot, msg])
 
 if __name__ == "__main__":
     # Theme and CSS moved to launch() as per Gradio 6.0 warning
