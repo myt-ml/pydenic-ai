@@ -16,19 +16,22 @@ A simple conversational AI agent built with [Pydantic AI](https://ai.pydantic.de
 
 ## Installation
 
-1.  **Clone code or navigate to directory**:
+1.  **Clone the repository**:
     ```bash
-    cd "c:\Users\mo\Downloads\Pydenic ai"
+    git clone https://github.com/myt-ml/pydenic-ai.git
+    cd pydenic-ai
     ```
 
-2.  **Activate Virtual Environment**:
-    - Windows (Powershell):
-      ```powershell
-      .\venv\Scripts\activate
-      ```
-    - Windows (Git Bash):
+2.  **Create and activate a virtual environment**:
+    - macOS/Linux:
       ```bash
-      source venv/Scripts/activate
+      python3 -m venv venv
+      source venv/bin/activate
+      ```
+    - Windows (PowerShell):
+      ```powershell
+      python -m venv venv
+      .\venv\Scripts\activate
       ```
 
 3.  **Install Dependencies**:
